@@ -1,0 +1,1 @@
+/Users/NathanShanko/IdeaProjects/makrdownparser/build/classes/kotlin/main/org/wycliffeassociates/otter/ApplicationKt.class:/Users/NathanShanko/IdeaProjects/makrdownparser/build/classes/kotlin/main/org/wycliffeassociates/otter/MarkdownParser.class
