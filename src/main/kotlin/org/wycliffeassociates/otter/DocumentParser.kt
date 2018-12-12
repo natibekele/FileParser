@@ -11,45 +11,64 @@ import org.wycliffeassociates.otter.enums.MarkdownSyntax.*
 import java.io.File
 
 
-class DocumentParser {
-    val book = Book()
+fun main(args: Array<String>) {
+    var file = File("/Users/NathanShanko/Downloads/en_obs/content/back/50.md")
+    val book = DocumentParser().parseMarkdown(file)
+    println(book)
+}
 
-    fun parse(project: Project, rc: ResourceContainer) {
+class DocumentParser {
+
+
+     fun parse(project: Project, rc: ResourceContainer): Book {
         val dc = rc.manifest.dublinCore
         when (dc.format) {
-            "md" -> {
-                parseMarkdown(rc.dir, project)
+            "text/markdown" -> {
+               val book = parseMarkdown(rc.dir)
+                return Book("test book", chapters = book)
             }
-            "usfm", "USFM" -> {
-                parseUSFM(rc.dir, project)
-            }
+//            "usfm", "USFM" -> {
+//                parseUSFM(rc.dir, project)
+//            }
+         else -> {
+             return Book()
+         }
         }
 
     }
 
-    private fun parseMarkdown(directory: File, project: Project): Chapter {
-        val files = directory.listFiles()
-        val chapter = Chapter()
-        for (file in files) {
-            val reader = file.bufferedReader()
+     fun parseMarkdown(directory: File): Map<Int, Chapter> {
+        //val subdirectory = File(directory, "/content/back")
+        //val files = subdirectory.listFiles()
+        //println(files)
+        var chunkList = mapOf<Int, Chunk>()
+        var chapterList = mapOf<Int, Chapter>()
+        var chapterNumber = 1
+       // for (file in files) {
+            val reader = directory.bufferedReader()
             reader.use {
                 var stringStore = ""
                 var sort = 1
                 it.forEachLine {
                     if (it == "") {
+                        println("break")
                         //break
                         val chunk = parseMarkdownBlock(stringStore, sort)
-                        chapter.chunks.
+                        chunk to chunkList[sort]
                         sort++
                     } else {
                         stringStore += it + "\n"
                     }
                 }
-            }
-        }
+           }
+            var newChapter = Chapter("no title", chunkList,sort = chapterNumber)
+            chapterList[chapterNumber] to newChapter
+            chapterNumber++
+        //}
+        return chapterList
     }
 
-    private fun parseUSFM(directory: File, project: Project) {
+    private fun parseUSFM(directory: File, project: Project?) {
         val files = directory.listFiles()
         for (file in files) {
             val reader = file.bufferedReader()
