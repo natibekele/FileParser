@@ -5,5 +5,6 @@ data class Sentence(
         override var text: String,
         val type: String,
         override val slug: String,
-        override val sort: Int
+        override val sort: Int,
+        override val chunkNumber: Int? = null
 ) : Chunk()

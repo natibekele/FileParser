@@ -11,27 +11,22 @@ import java.io.File
 
 
 fun main(args: Array<String>) {
-    var file = File("/Users/nathanshanko/Downloads/en_ulb/")
-    val book = DocumentParser().parseUSFM(file)
-    for (boo in book) {
-        println(boo.bookName)
-    }
+    var file = File("/Users/nathanshanko/Downloads/en_obs/")
+    val book = DocumentParser().parseMarkdown(file)
 }
 
 class DocumentParser {
 
     private val sep = System.lineSeparator()
 
-    fun parse(project: Project, rc: ResourceContainer): List<Book> {
+    fun parse(rc: ResourceContainer): List<Book> {
         val dc = rc.manifest.dublinCore
         var bookList = mutableListOf<Book>()
 
 
-        when (dc.format) {
+        when(dc.format) {
             "text/markdown" -> {
-                val book = parseMarkdown(rc.dir)
-                bookList.add(Book("test book", chapters = book))
-                return bookList
+                return parseMarkdown(rc.dir)
             }
             "text/usfm" -> {
                 return parseUSFM(rc.dir)
@@ -43,37 +38,40 @@ class DocumentParser {
 
     }
 
-    fun parseMarkdown(directory: File): Map<Int, Chapter> {
+    fun parseMarkdown(directory: File): List<Book> {
         val subdirectory = File(directory, "/content")
         val files = subdirectory.listFiles()
-        //println(files)
-        var chunkList = mutableMapOf<Int, Chunk>()
-        var chapterList = mutableMapOf<Int, Chapter>()
+        var chunkList = mutableListOf<Chunk>()
+        var chapterList = mutableListOf<Chapter>()
+        val bookList = mutableListOf<Book>()
         var chapterNumber = 1
         for (file in files) {
-            val reader = file.bufferedReader()
-            reader.use {
-                var stringStore = ""
-                var sort = 1
-                it.forEachLine {
-                    if (it == "" && stringStore != "") { //if empty line
-                        //break
-                        val chunk = parseMarkdownBlock(stringStore, sort)
-                        chunkList[sort] = chunk
-                        sort++
-                        stringStore = "" //reset string store
-                    } else {
-                        stringStore += it + "\n"
+            if (file.extension == "md" || file.extension == "MD") {
+                val reader = file.bufferedReader()
+                reader.use {
+                    var stringStore = ""
+                    var sort = 1
+                    it.forEachLine {
+                        if (it == "" && stringStore != "") { //if empty line
+                            //break
+                            val chunk = parseMarkdownBlock(stringStore, sort)
+                            chunkList.add(chunk)
+                            sort++
+                            stringStore = "" //reset string store
+                        } else {
+                            stringStore += it + "\n"
+                        }
                     }
                 }
+                var chapterTitle = chunkList[0]?.text
+                var newChapter = Chapter(chapterTitle, chunkList, sort = chapterNumber)
+                chapterList.add(newChapter)
+                chapterNumber++
+                chunkList = mutableListOf()
             }
-            var chapterTitle = chunkList[1]?.text
-            var newChapter = Chapter(chapterTitle, chunkList, sort = chapterNumber)
-            chapterList[chapterNumber] = newChapter
-            chapterNumber++
-            chunkList = mutableMapOf()
+            bookList.add(Book("", chapters = chapterList))
         }
-        return chapterList
+        return bookList
     }
 
     fun parseUSFM(directory: File): List<Book> {
@@ -83,10 +81,10 @@ class DocumentParser {
         val files = subdirectory.listFiles()
         for (file in files) {
                 if(file.extension == "usfm" || file.extension =="USFM") {
-                    var chunkList = mutableMapOf<Int, Chunk>()
+                    var chunkList = mutableListOf<Chunk>()
                     var verseNumber: Int = 0
                     var bookName: String = ""
-                    val chapterList = mutableMapOf<Int, Chapter>()
+                    val chapterList = mutableListOf<Chapter>()
                     var chapterNum = 1
 
                     val reader = file.bufferedReader()
@@ -99,9 +97,9 @@ class DocumentParser {
                                 }
                                 MARKER_CHAPTER_NUMBER.syntax -> {
                                     //add chunklist to chapter list
-                                    chapterList[chapterNum] = Chapter("no title", chunkList)
+                                    chapterList.add(Chapter("no title", chunkList))
                                     // clear chunk list to store chunks for next chapter
-                                    chunkList = mutableMapOf()
+                                    chunkList = mutableListOf()
                                     //get chapter number
                                     chapterNum = parsedLine[1]?.let {
                                         it.replace("\\s".toRegex(), "").toInt() //strip potential whitespace and convert to int
@@ -112,7 +110,7 @@ class DocumentParser {
                                     if (sub.size >= 2) {
                                         verseNumber = sub[0].replace("\\s".toRegex(), "").toInt()
                                         val verse = Verse(verseNumber, sub[1], "", verseNumber)
-                                        chunkList[verseNumber] = verse
+                                        chunkList.add(verse)
                                     }
                                 }
                                 MARKER_NEW_PARAGRAPH.syntax -> {
@@ -149,9 +147,9 @@ class DocumentParser {
                                         //addFormattingToNextVerse(line)
                                     } else {
                                         // add this to the last verse
-                                        if (chunkList.containsKey(verseNumber)) {
-                                            chunkList[verseNumber]!!.text += "$sep $parsedLine"
-                                        }
+//                                        if (chunkList.containsKey(verseNumber)) {
+//                                            chunkList[verseNumber]!!.text += "$sep $parsedLine"
+//                                        }
 
                                     }
                                 }
