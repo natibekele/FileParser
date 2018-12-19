@@ -1,35 +1,26 @@
 package org.wycliffeassociates.otter
 
-import org.wycliffeassociates.resourcecontainer.ResourceContainer
-import org.wycliffeassociates.resourcecontainer.entity.Project
-import org.commonmark.parser.Parser
 import org.wycliffeassociates.otter.data.model.*
 import org.wycliffeassociates.otter.enums.MarkdownSyntax.*
 import org.wycliffeassociates.otter.enums.UsfmSyntax.*
 
 import java.io.File
 
-
-fun main(args: Array<String>) {
-    var file = File("/Users/nathanshanko/Downloads/en_obs/")
-    val book = DocumentParser().parseMarkdown(file)
-}
-
 class DocumentParser {
 
     private val sep = System.lineSeparator()
 
-    fun parse(rc: ResourceContainer): List<Book> {
-        val dc = rc.manifest.dublinCore
+    fun parse(directory: File): List<Book> {
         var bookList = mutableListOf<Book>()
+        val fileList = directory.listFiles()
 
 
-        when(dc.format) {
-            "text/markdown" -> {
-                return parseMarkdown(rc.dir)
+        when(fileList[0].extension) {
+            "md" -> {
+                return parseMarkdown(directory)
             }
-            "text/usfm" -> {
-                return parseUSFM(rc.dir)
+            "usfm" -> {
+                return parseUSFM(directory)
             }
             else -> {
                 return bookList
@@ -38,15 +29,14 @@ class DocumentParser {
 
     }
 
-    fun parseMarkdown(directory: File): List<Book> {
-        val subdirectory = File(directory, "/content")
-        val files = subdirectory.listFiles()
+    private fun parseMarkdown(directory: File): List<Book> {
+        val files = directory.listFiles()
         var chunkList = mutableListOf<Chunk>()
         var chapterList = mutableListOf<Chapter>()
         val bookList = mutableListOf<Book>()
-        var chapterNumber = 1
         for (file in files) {
             if (file.extension == "md" || file.extension == "MD") {
+                val chapterNumber = file.nameWithoutExtension.toInt()
                 val reader = file.bufferedReader()
                 reader.use {
                     var stringStore = ""
@@ -66,23 +56,27 @@ class DocumentParser {
                 var chapterTitle = chunkList[0]?.text
                 var newChapter = Chapter(chapterTitle, chunkList, sort = chapterNumber)
                 chapterList.add(newChapter)
-                chapterNumber++
                 chunkList = mutableListOf()
             }
-            bookList.add(Book("", chapters = chapterList))
+        else {
+                Error("not a md file", Throwable())
+            }
         }
+
+
+        bookList.add(Book("", chapters = chapterList))
         return bookList
     }
 
-    fun parseUSFM(directory: File): List<Book> {
+    private fun parseUSFM(directory: File): List<Book> {
         val bookList = mutableListOf<Book>()
 
-        var subdirectory = File(directory, "/content")
-        val files = subdirectory.listFiles()
+        val files = directory.listFiles()
         for (file in files) {
                 if(file.extension == "usfm" || file.extension =="USFM") {
                     var chunkList = mutableListOf<Chunk>()
                     var verseNumber: Int = 0
+                    var identification = ""
                     var bookName: String = ""
                     val chapterList = mutableListOf<Chapter>()
                     var chapterNum = 1
@@ -93,11 +87,14 @@ class DocumentParser {
                             val parsedLine = parseUSFMLine(it)
                             when (parsedLine[0]) {
                                 MARKER_BOOK_NAME.syntax -> {
+                                    identification = parsedLine[1]
+                                }
+                                MARKER_TABLE_OF_CONTENT_SHORT.syntax -> {
                                     bookName = parsedLine[1]
                                 }
                                 MARKER_CHAPTER_NUMBER.syntax -> {
                                     //add chunklist to chapter list
-                                    chapterList.add(Chapter("no title", chunkList))
+                                    chapterList.add(Chapter("null", chunkList))
                                     // clear chunk list to store chunks for next chapter
                                     chunkList = mutableListOf()
                                     //get chapter number
@@ -114,6 +111,8 @@ class DocumentParser {
                                     }
                                 }
                                 MARKER_NEW_PARAGRAPH.syntax -> {
+                                    val paragraphMarker = Paragraph("paragraph marker", "/p", "para", 0,0)
+                                    chunkList.add(paragraphMarker)
                                 }
                                 MARKER_SECTION_HEADING.syntax -> {
                                 }
@@ -140,16 +139,11 @@ class DocumentParser {
                                 "" -> {
 
                                 }
-                            // catch styling or formatting
                                 else -> {
                                     if (parsedLine[0].length == 1) {
                                         // add this to the next coming verse
                                         //addFormattingToNextVerse(line)
                                     } else {
-                                        // add this to the last verse
-//                                        if (chunkList.containsKey(verseNumber)) {
-//                                            chunkList[verseNumber]!!.text += "$sep $parsedLine"
-//                                        }
 
                                     }
                                 }
@@ -173,25 +167,25 @@ class DocumentParser {
     private fun parseMarkdownBlock(text: String, sort: Int): Chunk {
         when (text.get(0)) {
             HEADERS.syntax -> {
-                return Sentence(text, "header", "", sort)
+                return Sentence(text, "header", "sentence_$sort", sort, sort)
             }
             BLOCK_QUOTES.syntax -> {
-                return Sentence(text, "block-quote", "", sort)
+                return Sentence(text, "block-quote", "sentence_$sort", sort, sort)
             }
             BOLD.syntax -> {
-                return Sentence(text, "bold-text", "", sort)
+                return Sentence(text, "bold-text", "sentence_$sort", sort, sort)
             }
             ITALICS.syntax -> {
-                return Sentence(text, "italic-text", "", sort)
+                return Sentence(text, "italic-text", "sentence_$sort", sort, sort)
             }
             LINK.syntax -> {
-                return Sentence(text, "link", "", sort)
+                return Sentence(text, "link", "sentence_$sort", sort, sort)
             }
             IMAGE.syntax -> {
-                return Sentence(text, "image-link", "", sort)
+                return Sentence(text, "image-link", "sentence_$sort", sort, sort)
             }
 
-            else -> return Sentence(text, "regular-text", "", sort)
+            else -> return Sentence(text, "regular-text", "sentence_$sort", sort, sort)
 
         }
     }

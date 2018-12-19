@@ -2,6 +2,10 @@ package org.wycliffeassociates.otter.enums
 
 enum class UsfmSyntax(val syntax: String) {
     MARKER_BOOK_NAME("\\id"),
+    MARKER_MAJOR_TITLE("\\mt"),
+    MARKER_TABLE_OF_CONTENTS_LONG("\\toc1"),
+    MARKER_TABLE_OF_CONTENT_SHORT("\\toc2"),
+    MARKER_TOC_ABBREV("\\toc3"),
     MARKER_CHAPTER_NUMBER("\\c"),
     MARKER_VERSE_NUMBER("\\v"),
     MARKER_NEW_PARAGRAPH("\\p"),

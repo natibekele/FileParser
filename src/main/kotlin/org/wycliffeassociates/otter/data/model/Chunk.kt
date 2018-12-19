@@ -4,5 +4,6 @@ abstract class Chunk {
     abstract var text: String
     abstract val slug: String
     abstract val sort: Int
-    abstract val chunkNumber: Int?
+    abstract val chunkNumber: Int
+    abstract val type: String
 }
